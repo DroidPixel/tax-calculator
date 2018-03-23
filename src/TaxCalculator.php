@@ -2,23 +2,27 @@
 
 namespace Paysera;
 
+use Money\Currency;
+use Money\Money;
+
 class TaxCalculator
 {
     //cash_in
-    const IN_TAX = 0.03;     //Tax percentage
-    const MAX_IN_TAX = 5.00; //Max tax for cash_in
+    const IN_TAX = 0.0003;
+    const MAX_IN_TAX = 500;
+
     //cash_out
-    const NO_TAX = 0.3;
-    const MAX_OUT_TAX = 1000.00;    //Natural
+    const NO_TAX = 0.003;
+    const MAX_OUT_TAX = 1000.00;
     const MAX_CNT = 3;
 
-    const LO_TAX = 0.3;
-    const MIN_OUT_TAX = 0.50;       //Legal
+    const LO_TAX = 0.003;
+    const MIN_OUT_TAX = 0.50;
 
     private $cashOutSession;
     private $converter;
 
-    public function __construct(CashOutSession $cashOutSession, Converter $converter)
+    public function __construct(CashOutSession $cashOutSession, MoneyConverter $converter)
     {
         $this->cashOutSession = $cashOutSession;
         $this->converter = $converter;
@@ -26,61 +30,71 @@ class TaxCalculator
 
     public function calculateTax(Operation $operation)
     {
-        $val = $operation->getAmount();
+        $amount = $operation->getMoney();
 
-        if ($operation->getCurrency() != "EUR") {
-            //Conversion is neeeded
-            $val = $this->converter->convert($val, $operation->getCurrency());
+        if ($amount->getCurrency() != "EUR") {
+            //Conversion is neeeded for operations, convert
+            $amount = $this->converter->convert($amount, new Currency("EUR"));
         }
 
         if ($operation->getType() == "cash_in") {
-            $taxToPay = $val * (TaxCalculator::IN_TAX / 100);
-            if ($taxToPay > TaxCalculator::MAX_IN_TAX) {
-                return TaxCalculator::MAX_IN_TAX;
+            $amount = $amount->multiply(TaxCalculator::IN_TAX, Money::ROUND_UP); //Calculate tax
+
+            if (
+                $amount->greaterThan(
+                    new Money(
+                        TaxCalculator::MAX_IN_TAX,
+                        new Currency("EUR")
+                    )
+                )
+            ) {
+                return $this->converter->convert(
+                    new Money(TaxCalculator::MAX_IN_TAX, new Currency("EUR")),
+                    new Currency($operation->getCurrency())
+                );
 
             } else {
-                return $this->converter->convertRound($taxToPay, $operation->getCurrency());
+                return $this->converter->convert(
+                    $amount,
+                    new Currency($operation->getCurrency())
+                );
             }
 
         } elseif ($operation->getType() == "cash_out") {
-            if ($operation->getUserType() == "natural") {//Implement conversion
+
+            if ($operation->getUserType() == "natural") {
 
                 if ($operation->getCurrency() != "EUR") {
-                    $taxToPay = //Converted tax to pay
-                        $this->cashOutSession->addToHistory(
+                //IF CURRENCY NEEDS TO BE RECONVERTED BACK TO ORIGINAL
+                    $amount = $this->cashOutSession->addToHistory(
                             $operation->getUserId(),
-                            $this->converter->convert(
-                                $operation->getAmount(),
-                                $operation->getCurrency()
-                            ),       //Convert the value to EURO for calculation
+                            $amount,
                             $operation->getDate()
-                    ) ;
+                    );
                         //Returns tax in SPECIFIED CURRENCY
-                        $taxToPay = $this->converter->convert(
-                            $taxToPay,
-                            "EUR",
-                            $operation->getCurrency()
-                            ) * (TaxCalculator::NO_TAX / 100);
-
-                        return $this->converter->convertRound($taxToPay, $operation->getCurrency());
-                    }
-
-                    $taxToPay = $this->cashOutSession->addToHistory(
-                        $operation->getUserId(),
-                        $operation->getAmount(),
-                        $operation->getDate()
-                        ) * (TaxCalculator::NO_TAX / 100);
-
-                    return $this->converter->convertRound($taxToPay, "EUR");    //$operation->getOpCurrency() == "EUR";
+                    return $this->converter->convert(
+                        $amount,
+                        new Currency($operation->getCurrency())
+                    )->multiply(TaxCalculator::NO_TAX, Money::ROUND_UP);
                 }
-                //Prideti limitus ir tikrinima
-             elseif ($operation->getUserType() == "legal") {
-                $taxToPay = $val * (TaxCalculator::LO_TAX / 100);
-                if ($taxToPay > TaxCalculator::MIN_OUT_TAX) {
-                    return $this->converter->convertRound($taxToPay, $operation->getCurrency());
+                    //If Currency original
+                    return $this->cashOutSession->addToHistory(
+                        $operation->getUserId(),
+                        $amount,
+                        $operation->getDate()
+                    )->multiply(TaxCalculator::NO_TAX);
+            } elseif ($operation->getUserType() == "legal") {
+                $amount = $amount->multiply(TaxCalculator::LO_TAX, Money::ROUND_UP);
+
+                if (floatval($amount->getAmount()) > TaxCalculator::MIN_OUT_TAX) {
+                    //Bigger than the min, OK
+                    return $this->converter->convert(
+                        $amount, new Currency($operation->getCurrency())
+                    );
+
                 } else {
-                    $taxToPay = 0;
-                    return $taxToPay;
+                    //Smaller than the min, no charge
+                    return new Money(0, new Currency("EUR"));
                 }
             } else {
                 //Fail

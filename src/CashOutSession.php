@@ -2,67 +2,91 @@
 
 namespace Paysera;
 
+use Money\Currency;
+use Money\Money;
+
 class CashOutSession
 {
     private $history;
+    private $currency;
 
-    public function __construct()
+    public function __construct(Currency $currency)
     {
         $this->history = [];
+        $this->currency = $currency;
     }
 
-    public function addToHistory($userId, $opValue, $opDate)
+    public function addToHistory($userId, Money $money, $date)
     {
-        if (!isset($this->history[$userId])) {
-            $this->history[$userId] = [
-                "count" => 1,
-                "value" => $opValue,
-                "date"  => date("W",strtotime($opDate))
-            ];
+        //Pas via constructor
+        $maxOutTax = new Money(TaxCalculator::MAX_OUT_TAX * 100, $this->currency);
 
-            if ($opValue > 1000) {
-                return $opValue - 1000;
+        if (!isset($this->history[$userId])) {
+            $this->history[$userId] = $this->resetHistory($money, $date);
+
+            if ($money->greaterThan($maxOutTax)) {
+                return $money->subtract($maxOutTax);
             } else {
-                return 0;
+                return new Money(0, $this->currency);
             }
 
         } else { //$userId exists
-            if ($this->history[$userId]["date"] == date("W",strtotime($opDate))) {
+            if ($this->history[$userId]["date"] == date("W",strtotime($date))) {
 
                 if (
                     $this->history[$userId]["count"] < TaxCalculator::MAX_CNT
-                    && ($this->history[$userId]["value"] + $opValue) < TaxCalculator::MAX_OUT_TAX
+                    && $money->add($this->history[$userId]["value"])->lessThan($maxOutTax)
                 ) {
 
                     $this->history[$userId]["count"]++;
-                    $this->history[$userId]["value"] += $opValue;
+                    $this->valToHistory($money, $userId);
 
-                    return 0;
+                    return new Money(0, $this->currency);
                 } else {
                     //Count => 3 or Amount > 1000, therefore apply additional cost
-                    if ($this->history[$userId]["value"] <= TaxCalculator::MAX_OUT_TAX) {
-                        $toLimit = TaxCalculator::MAX_OUT_TAX - $this->history[$userId]["value"];
+                    if ($maxOutTax->greaterThanOrEqual($this->history[$userId]["value"])) {
+                        $toLimit = $maxOutTax->subtract($this->history[$userId]["value"]);
                         //How much till limit?
-                        $this->history[$userId]["value"] += $opValue;
-                        return $opValue - $toLimit;
+                        $this->valToHistory($money, $userId);
+
+                        return $money->subtract($toLimit);
                     }
-                    $this->history[$userId]["value"] += $opValue;;
-                    return $opValue;
+                    $this->valToHistory($money, $userId);
+
+                    return $money;
                 }
             } else {
                 //Different week, reset count and amount
-                $this->history[$userId]["count"] = 1;
-                $this->history[$userId]["value"] = $opValue;
-                $this->history[$userId]["date"] = date("W",strtotime($opDate));
-                //add week
+                $this->history[$userId] = $this->resetHistory($money, $date);
 
-                if ($opValue < TaxCalculator::MAX_OUT_TAX ) {
-                    return 0.00;
+                if ($money->lessThan($maxOutTax)) {
+                    return new Money(0, $this->currency);
                 } else {
-                    return $opValue - TaxCalculator::MAX_OUT_TAX; //Used up the new weeks limit, calculate the amount to apply tax to
+                    //Used up the new weeks limit, calculate the amount to apply tax to
+                    return $money->subtract($maxOutTax);
                 }
             }
         }
+    }
+
+    private function resetHistory($money, $date)
+    {
+        return [
+            "count" => 1,
+            "value" => $money,
+            "date"  => date("W",strtotime($date))
+    ];
+    }
+
+    private function valToHistory($value, $userId)
+    {
+        $this->history[$userId]["value"] =
+            $this->history[$userId]["value"]->add($value);
+    }
+
+    public function getHistory(): array
+    {
+        return $this->history;
     }
 
 }
