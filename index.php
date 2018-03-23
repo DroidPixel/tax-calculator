@@ -35,8 +35,6 @@ if (($handle = fopen($fileName, "r")) !== false) {
     }
 }
 
-//Calculation
-
 //Setting exchanger
 $exchanger = new ReversedCurrenciesExchange(new FixedExchange([
     'EUR' => [
