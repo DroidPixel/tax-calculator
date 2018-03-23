@@ -82,7 +82,7 @@ class TaxCalculator
                         $operation->getUserId(),
                         $amount,
                         $operation->getDate()
-                    )->multiply(TaxCalculator::NO_TAX);
+                    )->multiply(TaxCalculator::NO_TAX, Money::ROUND_UP);
             } elseif ($operation->getUserType() == "legal") {
                 $amount = $amount->multiply(TaxCalculator::LO_TAX, Money::ROUND_UP);
 

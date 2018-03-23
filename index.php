@@ -51,7 +51,7 @@ $calculator = new TaxCalculator(
     new CashOutSession($baseCurrency),
     new MoneyConverter(
         new Converter(
-            new ISOCurrencies(),
+            $currencies,
             $exchanger
         )
     )
