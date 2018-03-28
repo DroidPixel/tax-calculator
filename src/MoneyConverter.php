@@ -6,10 +6,8 @@ use Money\Money;
 use Money\Converter;
 use Money\Currency;
 
-
 class MoneyConverter
 {
-
     private $converter;
 
     public function __construct(Converter $converter)
@@ -19,14 +17,10 @@ class MoneyConverter
 
     public function convert(Money $amount, Currency $to)
     {
-
-        if ($amount->getCurrency() != $to->getCode()) {
+        if ($amount->getCurrency() !== $to) {
             $amount = $this->converter->convert($amount, $to);
-
-            return $amount;
         }
-        //No need for conversion if currency ==
+
         return $amount;
     }
-
 }

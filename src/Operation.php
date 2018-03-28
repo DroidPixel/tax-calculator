@@ -2,10 +2,7 @@
 
 namespace Paysera;
 
-use Money\Currency;
 use Money\Money;
-use Money\Currencies\ISOCurrencies;
-use Money\Parser\DecimalMoneyParser;
 
 class Operation
 {
@@ -15,7 +12,7 @@ class Operation
     private $type;
     private $money;
 
-    public function __construct($date, $userId , $userType, $type, Money $money)
+    public function __construct(\DateTime $date, $userId, $userType, $type, Money $money)
     {
         $this->date = $date;
         $this->userId = $userId;
@@ -31,7 +28,7 @@ class Operation
 
     public function getCurrency()
     {
-        return $this->money->getCurrency()->getCode();
+        return $this->money->getCurrency();
     }
 
     public function getType(): string
@@ -49,7 +46,7 @@ class Operation
         return $this->userType;
     }
 
-    public function getDate(): string
+    public function getDate(): \DateTime
     {
         return $this->date;
     }
