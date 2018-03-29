@@ -3,7 +3,7 @@
 namespace Paysera;
 
 
-interface FileParser
+class CsvParser
 {
 
 }
