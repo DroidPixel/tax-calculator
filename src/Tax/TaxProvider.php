@@ -2,6 +2,8 @@
 
 namespace Paysera;
 
+use Paysera\Operations\Operation;
+
 class TaxProvider
 {
     //cash_in
