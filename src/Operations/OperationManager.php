@@ -24,15 +24,15 @@ class OperationManager
         $operation = new Operation();
         $operationValidator = new OperationValidator();
 
-        if($operationValidator->validateOperation($operationDetails)) {
+        if ($operationValidator->validateOperation($operationDetails)) {
             $operation->setDate(new \DateTime($operationDetails['date']));
             $operation->setUserId($operationDetails['userID']);
             $operation->setUserType($operationDetails['userType']);
             $operation->setType($operationDetails['operationType']);
             $operation->setMoney(
                 $this->moneyParser->parse(
-                $operationDetails['amount'],
-                $operationDetails['currency']
+                    $operationDetails['amount'],
+                    $operationDetails['currency']
                 )
             );
             return $operation;
