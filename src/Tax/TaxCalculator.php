@@ -1,6 +1,6 @@
 <?php
 
-namespace Paysera;
+namespace Paysera\Tax;
 
 use Money\Money;
 

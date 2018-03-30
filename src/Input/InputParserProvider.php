@@ -2,24 +2,34 @@
 
 namespace Paysera\Input;
 
-class InputParser
+class InputParserProvider
 {
     private $inputParsers;
+    private $supportedExtensions = ['csv', 'json'];
 
     public function __construct()
     {
         $this->inputParsers = [];
     }
 
-    public function addParser(string $extension, InputParserInterface $parser)
+    public function addParser(string $extension, InputParserInterface $parser): self
     {
-        $this->inputParsers[$extension] = $parser;
-
-        return $this;
+            $this->inputParsers[$extension] = $parser;
+            return $this;
     }
 
-    public function getParserByKey(string $extension)
+    /**
+     * @param string $extension
+     * @return InputParserInterface
+     * @throws \Exception
+     */
+    public function getParserByKey(string $extension): InputParserInterface
     {
-        return $this->inputParsers[$extension];
+        if (in_array($extension, $this->supportedExtensions)) {
+            return $this->inputParsers[$extension];
+        }
+
+        throw new \Exception("Extension not supported. \n");
     }
+
 }

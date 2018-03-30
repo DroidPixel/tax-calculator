@@ -4,11 +4,13 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Money\Money;
 use Paysera\CashOutSession;
-use Paysera\InputParser;
+use Paysera\Input\CsvParser;
+use Paysera\Input\InputParserProvider;
+use Paysera\Input\JsonParser;
 use Paysera\MoneyConverter;
-use Paysera\Operation;
-use Paysera\OperationTaxLimitProvider;
-use Paysera\TaxCalculator;
+use Paysera\Operations\OperationManager;
+use Paysera\Operations\OperationTaxLimitProvider;
+use Paysera\Tax\TaxCalculator;
 use Paysera\LimitChecker;
 use Money\Formatter\DecimalMoneyFormatter;
 use Money\Currencies\ISOCurrencies;
@@ -17,60 +19,62 @@ use Money\Currency;
 use Money\Converter;
 use Money\Exchange\FixedExchange;
 use Money\Exchange\ReversedCurrenciesExchange;
-use Paysera\TaxProvider;
+use Paysera\Tax\TaxPercentage;
+use Paysera\Tax\TaxProvider;
 
 $fileName = $argv[1];
+$extension = $argv[2];
 $operationList = [];
 
 $currencies = new ISOCurrencies();
-$moneyParser = new DecimalMoneyParser($currencies);
+$calculator = new TaxCalculator();
+$percentager = new TaxPercentage();
 
-$inputParserProvider = new InputParser();
-$inputParserProvider->addParser('csv', $csvParser);
-$inputParserProvider->addParser('csv', $csvParser);
+$formatter = new DecimalMoneyFormatter($currencies);
+$taxProvider = new TaxProvider($percentager);
 
-//CSV PARSING
-if (($handle = fopen($fileName, "r")) !== false) {
-    while (($data = fgetcsv($handle))) {
-        $operation = new Operation(
-            new \DateTime($data[0]),
-            $data[1],
-            $data[2],
-            $data[3],
-            $moneyParser->parse($data[4], $data[5])
-        );
-        $operationList[] = $operation;
-    }
-}
-
-//Setting exchanger
 $exchanger = new ReversedCurrenciesExchange(new FixedExchange([
     'EUR' => [
         'USD' => 1.1497,
         'JPY' => 129.53
     ]
 ]));
+$converter = new MoneyConverter(new Converter($currencies, $exchanger));
 
-//Setting base currency to do limit calculations
-$baseCurrency = new Currency(TaxProvider::BASE_CURRENCY);
+$baseCurrency = new Currency($percentager->getBaseCurrency());
+$limitChecker = new LimitChecker();
+$limitProvider = new OperationTaxLimitProvider($baseCurrency, $percentager);
+$inputParserProvider = (new InputParserProvider())
+    ->addParser('csv', new CsvParser())
+    ->addParser('json', new JsonParser());
 
 $cashOutSession = new CashOutSession(
     $baseCurrency,
     new Money(
-        TaxProvider::MAX_OUT_TAX * 100,
+        $percentager->getMaximumOutputTax() * 100,
         $baseCurrency
-    )
+    ),
+    $percentager->getMaximumCount()
 );
 
-//Initializing TaxCalculator obj
-$calculator = new TaxCalculator();
+$operationManager = new OperationManager(new DecimalMoneyParser($currencies));
 
-$formatter = new DecimalMoneyFormatter($currencies);
-$taxProvider = new TaxProvider();
-$converter = new MoneyConverter(new Converter($currencies, $exchanger));
+try {
+    $inputParser = $inputParserProvider->getParserByKey($extension);
+    $parsedInputArray = $inputParser->parseFromFile($fileName);
+} catch(Exception $e) {
+    echo $e->getMessage();
+    exit();
+}
 
-$limitChecker = new LimitChecker();
-$limitProvider = new OperationTaxLimitProvider($baseCurrency);
+foreach ($parsedInputArray as $parsedInput) {
+    try {
+        $operationList[] = $operationManager->createOperation($parsedInput);
+    } catch(Exception $e) {
+        echo $e->getMessage();
+        exit();
+    }
+}
 
 foreach ($operationList as $operationItem) {
     $amount = $operationItem->getMoney();

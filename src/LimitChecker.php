@@ -3,6 +3,7 @@
 namespace Paysera;
 
 use Money\Money;
+use Paysera\Tax\TaxLimit;
 
 class LimitChecker
 {

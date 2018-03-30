@@ -1,0 +1,20 @@
+[
+  {
+    "userType": "natural",
+    "operationType": "cash_out",
+    "percentage": 0.003,
+    "taxlessOperationsCount": 3,
+    "taxlessAmount": 1000.00
+  },
+  {
+    "userType": "legal",
+    "operationType": "cash_out",
+    "percentage": 0.003,
+    "minTax": 0.50
+  },
+  {
+    "operationType": "cash_in",
+    "percentage": 0.0003,
+    "maxTax": 5.00
+  }
+]

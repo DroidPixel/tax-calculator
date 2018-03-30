@@ -1,17 +1,21 @@
 <?php
 
-namespace Paysera;
+namespace Paysera\Operations;
 
 use Money\Currency;
 use Money\Money;
+use Paysera\Tax\TaxLimit;
+use Paysera\Tax\TaxPercentage;
 
 class OperationTaxLimitProvider
 {
     private $currency;
+    private $percentager;
 
-    public function __construct(Currency $currency)
+    public function __construct(Currency $currency, TaxPercentage $percentager)
     {
         $this->currency = $currency;
+        $this->percentager = $percentager;
     }
 
     public function getTaxLimit(Operation $operation)
@@ -21,9 +25,9 @@ class OperationTaxLimitProvider
         $maxTaxAmount = 0;
 
         if ($operation->getType() === "cash_out" && $operation->getUserType() === "legal") {
-            $minTaxAmount = TaxProvider::MIN_OUT_TAX;
+            $minTaxAmount = $this->percentager->getMinimumOutputTax();
         } elseif ($operation->getType() === "cash_in") {
-            $maxTaxAmount = TaxProvider::MAX_IN_TAX;
+            $maxTaxAmount = $this->percentager->getMaximumInputTax();
         }
 
         $taxLimit->setMaxTax(

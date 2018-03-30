@@ -1,6 +1,6 @@
 <?php
 
-namespace Paysera;
+namespace Paysera\Operations;
 
 use Money\Money;
 
@@ -12,12 +12,43 @@ class Operation
     private $type;
     private $money;
 
-    public function __construct(\DateTime $date, $userId, $userType, $type, Money $money)
+    /**
+     * @param \DateTime $date
+     */
+    public function setDate(\DateTime $date)
     {
         $this->date = $date;
+    }
+
+    /**
+     * @param mixed $userId
+     */
+    public function setUserId($userId)
+    {
         $this->userId = $userId;
+    }
+
+    /**
+     * @param mixed $userType
+     */
+    public function setUserType($userType)
+    {
         $this->userType = $userType;
+    }
+
+    /**
+     * @param mixed $type
+     */
+    public function setType($type)
+    {
         $this->type = $type;
+    }
+
+    /**
+     * @param Money $money
+     */
+    public function setMoney(Money $money)
+    {
         $this->money = $money;
     }
 

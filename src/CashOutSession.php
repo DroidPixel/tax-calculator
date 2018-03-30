@@ -4,18 +4,21 @@ namespace Paysera;
 
 use Money\Currency;
 use Money\Money;
+use Paysera\Tax\TaxProvider;
 
 class CashOutSession
 {
     private $history;
     private $currency;
     private $maxOutTax;
+    private $maxCount;
 
-    public function __construct(Currency $currency, Money $maxOutTax)
+    public function __construct(Currency $currency, Money $maxOutTax, int $maxCount)
     {
         $this->history = [];
         $this->currency = $currency;
         $this->maxOutTax = $maxOutTax;
+        $this->maxCount = $maxCount;
     }
 
     public function addToHistory($userId, Money $money, \DateTime $date)
@@ -28,7 +31,7 @@ class CashOutSession
         } else {
             if ($this->history[$userId]['date']->format('W') === $date->format('W')) {
                 if (
-                    $this->history[$userId]['count'] < TaxProvider::MAX_CNT
+                    $this->history[$userId]['count'] < $this->maxCount
                     && $money->add($this->history[$userId]['value'])->lessThan($this->maxOutTax)
                 ) {
                     $this->history[$userId]['count']++;
