@@ -34,6 +34,8 @@ class Operation
     public function setUserType($userType)
     {
         $this->userType = $userType;
+
+        return $this;
     }
 
     /**
@@ -42,6 +44,8 @@ class Operation
     public function setType($type)
     {
         $this->type = $type;
+
+        return $this;
     }
 
     /**

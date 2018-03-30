@@ -12,10 +12,9 @@ class OperationTaxLimitProvider
     private $currency;
     private $percentager;
 
-    public function __construct(Currency $currency, TaxPercentage $percentager)
+    public function __construct(Currency $currency)
     {
         $this->currency = $currency;
-        $this->percentager = $percentager;
     }
 
     public function getTaxLimit(Operation $operation)

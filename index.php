@@ -28,10 +28,16 @@ $operationList = [];
 
 $currencies = new ISOCurrencies();
 $calculator = new TaxCalculator();
-$percentager = new TaxPercentage();
+$taxConfig = json_decode(file_get_contents('tax-config.json'), true);
 
 $formatter = new DecimalMoneyFormatter($currencies);
-$taxProvider = new TaxProvider($percentager);
+$taxProvider = new TaxProvider($taxConfig);
+
+$operation = (new \Paysera\Operations\Operation())
+    ->setType('cash_out')
+    ->setUserType('natural');
+
+var_dump($taxProvider->provideTax($operation)); die();
 
 $exchanger = new ReversedCurrenciesExchange(new FixedExchange([
     'EUR' => [
@@ -41,9 +47,9 @@ $exchanger = new ReversedCurrenciesExchange(new FixedExchange([
 ]));
 $converter = new MoneyConverter(new Converter($currencies, $exchanger));
 
-$baseCurrency = new Currency($percentager->getBaseCurrency());
+$baseCurrency = new Currency('EUR');
 $limitChecker = new LimitChecker();
-$limitProvider = new OperationTaxLimitProvider($baseCurrency, $percentager);
+$limitProvider = new OperationTaxLimitProvider($baseCurrency);
 $inputParserProvider = (new InputParserProvider())
     ->addParser('csv', new CsvParser())
     ->addParser('json', new JsonParser());
@@ -79,6 +85,8 @@ foreach ($parsedInputArray as $parsedInput) {
 foreach ($operationList as $operationItem) {
     $amount = $operationItem->getMoney();
     $percentage = $taxProvider->provideTax($operationItem);
+
+    var_dump($percentage); die();
 
     if (!$amount->getCurrency()->equals($baseCurrency)) {
         $amount = $converter->convert($amount, $baseCurrency);
